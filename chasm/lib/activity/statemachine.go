@@ -231,6 +231,7 @@ var TransitionCompleted = chasm.NewTransition(
 
 type failedEvent struct {
 	req             *historyservice.RespondActivityTaskFailedRequest
+	retryState      enumspb.RetryState
 	baseHandler     metrics.Handler
 	enrichedHandler metrics.Handler
 }
@@ -247,6 +248,7 @@ var TransitionFailed = chasm.NewTransition(
 	func(a *Activity, ctx chasm.MutableContext, event failedEvent) error {
 		return a.StoreOrSelf(ctx).RecordCompleted(ctx, func(ctx chasm.MutableContext) error {
 			req := event.req.GetFailedRequest()
+			a.Outcome.Get(ctx).RetryState = event.retryState
 
 			if details := req.GetLastHeartbeatDetails(); details != nil {
 				heartbeat := a.getOrCreateLastHeartbeat(ctx)
@@ -392,6 +394,7 @@ var TransitionTimedOut = chasm.NewTransition(
 		timeoutType := event.timeoutType
 
 		return a.StoreOrSelf(ctx).RecordCompleted(ctx, func(ctx chasm.MutableContext) error {
+			a.Outcome.Get(ctx).RetryState = event.retryState
 			var err error
 			switch timeoutType {
 			case enumspb.TIMEOUT_TYPE_SCHEDULE_TO_START,
@@ -415,7 +418,11 @@ var TransitionTimedOut = chasm.NewTransition(
 			if err != nil {
 				return err
 			}
-			if event.retryState == enumspb.RETRY_STATE_TIMEOUT {
+
+			retryPreventedByScheduleToClose := event.retryState == enumspb.RETRY_STATE_TIMEOUT &&
+				(timeoutType == enumspb.TIMEOUT_TYPE_START_TO_CLOSE ||
+					timeoutType == enumspb.TIMEOUT_TYPE_HEARTBEAT)
+			if retryPreventedByScheduleToClose {
 				if err := a.recordScheduleToStartOrCloseTimeoutFailure(
 					ctx,
 					enumspb.TIMEOUT_TYPE_SCHEDULE_TO_CLOSE,
