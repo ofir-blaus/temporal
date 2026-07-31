@@ -39,8 +39,14 @@ const (
 type Event struct {
 	Type EventType
 
-	Retryable  bool // RespondFailed: the failure is retryable. Whether it actually retries also depends on the retry policy.
-	KeepPaused bool // Reset: a paused activity stays paused across the reset.
+	Failure    *Failure // RespondFailed: the failure to send, or nil to respond with no failure at all (as a worker may). A nil failure is retryable.
+	KeepPaused bool     // Reset: a paused activity stays paused across the reset.
+}
+
+// Failure specifies the failure a RespondFailed event sends. Its zero value is the default failure
+// used now; a nil *Failure on the event means the worker responds with no failure at all.
+type Failure struct {
+	Retryable bool // whether the failure is retryable. Whether it actually retries also depends on the retry policy.
 }
 
 // Canonical Event values for the variants frequently used in traces
@@ -48,8 +54,9 @@ var (
 	Poll                   = Event{Type: PollType}
 	Heartbeat              = Event{Type: HeartbeatType}
 	Complete               = Event{Type: RespondCompletedType}
-	FailRetryably          = Event{Type: RespondFailedType, Retryable: true}
-	FailNonRetryably       = Event{Type: RespondFailedType, Retryable: false}
+	FailRetryably          = Event{Type: RespondFailedType, Failure: &Failure{Retryable: true}}
+	FailNonRetryably       = Event{Type: RespondFailedType, Failure: &Failure{Retryable: false}}
+	FailWithoutFailure     = Event{Type: RespondFailedType}
 	RespondCanceled        = Event{Type: RespondCanceledType}
 	RequestCancel          = Event{Type: RequestCancelType}
 	Terminate              = Event{Type: TerminateType}
@@ -112,7 +119,10 @@ func (t EventType) String() string {
 func (e Event) String() string {
 	switch e.Type {
 	case RespondFailedType:
-		return fmt.Sprintf("%s[retryable=%v]", e.Type.String(), e.Retryable)
+		if e.Failure == nil {
+			return fmt.Sprintf("%s[omitted]", e.Type.String())
+		}
+		return fmt.Sprintf("%s[retryable=%v]", e.Type.String(), e.Failure.Retryable)
 	case ResetType:
 		return fmt.Sprintf("%s[keepPaused=%v]", e.Type.String(), e.KeepPaused)
 	default:
