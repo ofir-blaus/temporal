@@ -382,20 +382,10 @@ func UnpauseActivity(
 	shardContext historyi.ShardContext,
 	mutableState historyi.MutableState,
 	ai *persistencespb.ActivityInfo,
-	resetAttempts bool,
-	resetHeartbeat bool,
 	jitter time.Duration,
 ) error {
 	if err := mutableState.UpdateActivity(ai.ScheduledEventId, func(activityInfo *persistencespb.ActivityInfo, ms historyi.MutableState) error {
 		unpauseActivityInfo(activityInfo)
-
-		if resetAttempts {
-			activityInfo.Attempt = 1
-		}
-		if resetHeartbeat {
-			activityInfo.LastHeartbeatDetails = nil
-			activityInfo.LastHeartbeatUpdateTime = nil
-		}
 
 		// if activity is not running - we need to regenerate the retry task as schedule activity immediately
 		if GetActivityState(ai) == enumspb.PENDING_ACTIVITY_STATE_SCHEDULED {
