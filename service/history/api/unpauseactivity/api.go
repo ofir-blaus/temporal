@@ -70,6 +70,8 @@ func Invoke(
 		tag.WorkflowNamespaceID(request.GetNamespaceId()),
 		tag.WorkflowID(frontendReq.GetExecution().GetWorkflowId()),
 		tag.WorkflowRunID(frontendReq.GetExecution().GetRunId()),
+		tag.NewBoolTag("reset_attempts", frontendReq.GetResetAttempts()),
+		tag.NewBoolTag("reset_heartbeat", frontendReq.GetResetHeartbeat()),
 		tag.NewDurationTag("jitter", frontendReq.GetJitter().AsDuration()),
 	)
 
@@ -122,6 +124,8 @@ func processUnpauseActivityRequest(
 
 		if err := workflow.UnpauseActivity(
 			shardContext, mutableState, ai,
+			frontendRequest.GetResetAttempts(),
+			frontendRequest.GetResetHeartbeat(),
 			frontendRequest.GetJitter().AsDuration()); err != nil {
 			return nil, err
 		}

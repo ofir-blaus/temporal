@@ -752,10 +752,12 @@ func (a *activities) processSingleTask(
 		err = processTask(ctx, limiter, task,
 			func(executionInfo *workflowpb.WorkflowExecutionInfo) error {
 				unpauseRequest := &workflowservice.UnpauseActivityRequest{
-					Namespace: namespace,
-					Execution: executionInfo.Execution,
-					Identity:  operation.UnpauseActivitiesOperation.Identity,
-					Jitter:    operation.UnpauseActivitiesOperation.Jitter,
+					Namespace:      namespace,
+					Execution:      executionInfo.Execution,
+					Identity:       operation.UnpauseActivitiesOperation.Identity,
+					ResetAttempts:  operation.UnpauseActivitiesOperation.ResetAttempts,
+					ResetHeartbeat: operation.UnpauseActivitiesOperation.ResetHeartbeat,
+					Jitter:         operation.UnpauseActivitiesOperation.Jitter,
 				}
 
 				switch ao := operation.UnpauseActivitiesOperation.GetActivity().(type) {
