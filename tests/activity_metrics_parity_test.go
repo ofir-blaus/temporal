@@ -18,18 +18,11 @@ import (
 	"go.temporal.io/server/common/testing/await"
 )
 
-// TestScheduleToStartMetric asserts that SAA and WFA both record task_schedule_to_start_latency,
-// identically, whenever a worker starts an activity attempt. Recordings from workflow-task starts
-// share the metric name, so only those tagged with the activity-task start operation and task type
-// are collected.
-//
-// Each case drives the same trace through both implementations and asserts on the resulting
-// recordings:
-//   - one sample per accepted worker start: FirstAttempt records once, RetryAttempt records again
-//     when the worker picks up the attempt scheduled after the retry backoff;
-//   - the exact tag set of the activity-task start scope, under both settings of
-//     MetricsBreakdownByTaskQueue, which decides whether "taskqueue" carries the real name or the
-//     "__omitted__" placeholder that keeps metric cardinality down.
+// TestScheduleToStartMetric asserts that SAA and WFA record task_schedule_to_start_latency
+// identically: one sample per accepted worker start, with the same tags. Workflow-task starts share
+// the metric name, so only recordings tagged with the activity-task start operation and task type
+// are collected. Both settings of MetricsBreakdownByTaskQueue are covered, since it decides whether
+// "taskqueue" carries the real name or the "__omitted__" cardinality placeholder.
 func (s *activityParityTestSuite) TestScheduleToStartMetric() {
 	type scenario struct {
 		name           string
