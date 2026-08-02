@@ -286,14 +286,13 @@ func (a *Activity) HandleStarted(ctx chasm.MutableContext, request *historyservi
 	if lastAttempt.GetStamp() != request.GetStamp() {
 		return nil, serviceerrors.NewObsoleteMatchingTask("activity attempt stamp mismatch")
 	}
-	dispatchTime := a.dispatchTimeForAttempt(lastAttempt)
 	if err := TransitionStarted.Apply(a, ctx, request); err != nil {
 		if errors.Is(err, chasm.ErrInvalidTransition) {
 			return nil, serviceerrors.NewObsoleteMatchingTask(err.Error())
 		}
 		return nil, err
 	}
-	if dispatchTime != nil {
+	if dispatchTime := a.dispatchTimeForAttempt(lastAttempt); dispatchTime != nil {
 		metrics.TaskScheduleToStartLatency.With(a.taskScheduleToStartMetricsHandler(ctx)).Record(
 			lastAttempt.GetStartedTime().AsTime().Sub(dispatchTime.AsTime()),
 		)
